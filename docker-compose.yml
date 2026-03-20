@@ -33,8 +33,7 @@ services:
         DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mydb
     container_name: backend
     restart: unless-stopped
-    env_file:
-      - ../../backend/.env.production
+    env_file: -../backend/.env.production
     ports:
       - "3001:3001"
     depends_on:
@@ -62,8 +61,7 @@ services:
         NEXT_PUBLIC_APP_NAME: Project M
     container_name: frontend
     restart: unless-stopped
-    env_file:
-      - ../../frontend/.env.production
+    env_file: -../frontend/.env.production
     ports:
       - "3000:3000"
     depends_on:
