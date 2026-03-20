@@ -1,0 +1,91 @@
+services:
+  # =========================
+  # 🐘 POSTGRES
+  # =========================
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432" # dev only (production thường không expose)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =========================
+  # 🔥 BACKEND (Node / Nest / Express)
+  # =========================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mydb
+    container_name: backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.production
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  # =========================
+  # 🌐 FRONTEND (Next.js / React)
+  # =========================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+        NEXT_PUBLIC_APP_NAME: Project M
+    container_name: frontend
+    restart: unless-stopped
+    env_file:
+      - ./frontend/.env.production
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# =========================
+# 💾 VOLUMES
+# =========================
+volumes:
+  pgdata:
+
+# =========================
+# 🌐 NETWORK
+# =========================
+networks:
+  app-network:
+    driver: bridge
